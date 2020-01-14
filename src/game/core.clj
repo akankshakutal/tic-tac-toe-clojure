@@ -16,6 +16,8 @@
 
 (defn has-won? [user-moves] (some #(every? user-moves %) win-sets))
 
+(defn change-turn [game] (assoc game :current (:opponent game) :opponent (:current game)))
+
 (defn update-board
   [player board]
   (reduce #(assoc %1 (dec %2) (:symbol player)) board (:moves player)))
@@ -36,21 +38,28 @@
        (println)))
 
 (defn make-move
-  [user-input {:keys [current opponent]}]
-  (let [current (update current :moves conj user-input)
-        game (assoc game :current opponent :opponent current)]
-    (if (has-won? (:moves current)) (assoc game :won true) game)))
+  [user-input game]
+  (let [current (update (:current game) :moves conj user-input)]
+    (if (has-won? (:moves current))
+      (assoc game :won true :current current)
+      (assoc game :current current))))
 
-(defn start
-  []
+(defn play [game input]
+  (-> input
+      (make-move game)
+      (change-turn)))
+
+(defn print-messages [game]
   (do
     (print-board game)
-    (loop [input (read) game game]
-      (if (:won game)
-        (println (str (:symbol (:opponent game)) " Won"))
-        (do
-          (print-board (make-move input game))
-          (println (str (:symbol (:current game)) " Enter Number :"))
+    (println (str (:symbol (:current game)) " Enter Number :"))
+    ))
+
+(defn start []
+  (loop [game game input (read)]
+    (if (:won game)
+      (println (str (:symbol (:opponent game)) " Won"))
+      (do (print-messages (play game input))
           (if (valid-move? input)
-            (recur (read) (make-move input game))
-            (println "Invalid Move")))))))
+            (recur (play game input) (read)))
+          ))))
